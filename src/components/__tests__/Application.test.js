@@ -1,6 +1,6 @@
 import React from "react";
 
-import { render, cleanup, waitForElement, fireEvent, prettyDOM, getByText, getAllByTestId, getByAltText, getByPlaceholderText, queryByText } from "@testing-library/react";
+import { render, cleanup, waitForElement, fireEvent, prettyDOM, getByText, getAllByTestId, getByAltText, getByPlaceholderText, queryByText, act } from "@testing-library/react";
 import axios from "axios";
 
 import Application from "components/Application";
@@ -139,20 +139,39 @@ describe("Form", () => {
 
     fireEvent.click(getByText(appointment, "Save"));
 
-    //should be an error 
-    // Could not book appointment.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
 
-    //these are mutually exclusive. 'Saving' should not show up with failed mock we put
+    expect(await waitForElement(() => getByText(appointment, "Could not book appointment."))).toBeInTheDocument();
 
-    //expect(await waitForElement(() => getByText(appointment, "Could not book appointment."))).toBeInTheDocument();
-    expect(getByText(appointment, "Saving")).not.toBeInTheDocument();
-
-
-    debug();
+    expect(queryByText(appointment, "Saving")).not.toBeInTheDocument();
 
   });
 
-  xit("shows the delete error when failing to delete an existing appointment", async () => {
+  it("shows the delete error when failing to delete an existing appointment", async () => {
+    axios.delete.mockRejectedValueOnce();
+
+    const { container, debug } = render(<Application />);
+
+    await waitForElement(() => getByText(container, "Archie Cohen"));
+
+    const appointments = getAllByTestId(container, "appointment");
+    const appointment = appointments[1];
+
+    fireEvent.click(getByAltText(appointment, "Delete"));
+
+    expect(getByText(appointment, "Are you sure you would like to delete?")).toBeInTheDocument();
+
+    fireEvent.click(getByText(appointment, "Confirm"));
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(await waitForElement(() => getByText(appointment, "Could not cancel appointment."))).toBeInTheDocument();
+
+    expect(queryByText(appointment, "Deleting")).not.toBeInTheDocument();
 
   });
 
