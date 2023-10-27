@@ -1,7 +1,7 @@
 import React from "react";
 
 import { render, cleanup, waitForElement, fireEvent, prettyDOM, getByText, getAllByTestId, getByAltText, getByPlaceholderText, queryByText } from "@testing-library/react";
-import { act } from 'react-dom/test-utils';
+import axios from "axios";
 
 import Application from "components/Application";
 
@@ -78,8 +78,6 @@ describe("Form", () => {
 
     expect(getByText(appointment, "Are you sure you would like to delete?")).toBeInTheDocument();
 
-    // fireEvent.click(getByAltText(appointment, "Sylvia Palmer"));
-
     fireEvent.click(getByText(appointment, "Confirm"));
 
     expect(getByText(appointment, "Deleting")).toBeInTheDocument();
@@ -91,6 +89,70 @@ describe("Form", () => {
       queryByText(day, "Monday")
     );
     expect(getByText(day, "2 spots remaining")).toBeInTheDocument();
+
+  });
+
+  it("loads data, edits an interview and keeps the spots remaining for Monday the same", async () => {
+    const { container, debug } = render(<Application />);
+
+    await waitForElement(() => getByText(container, "Archie Cohen"));
+
+    const appointments = getAllByTestId(container, "appointment");
+    const appointment = appointments[1];
+
+    fireEvent.click(getByAltText(appointment, "Edit"));
+
+    fireEvent.change(getByPlaceholderText(appointment, /enter student name/i), {
+      target: { value: "Archie C" }
+    });
+
+    fireEvent.click(getByText(appointment, "Save"));
+
+    expect(getByText(appointment, "Saving")).toBeInTheDocument();
+
+    await waitForElement(() => getByText(appointment, "Archie C"));
+
+    expect(getByText(appointment, "Archie C")).toBeInTheDocument();
+
+    const day = getAllByTestId(container, "day").find(day =>
+      queryByText(day, "Monday")
+    );
+    expect(getByText(day, "1 spot remaining")).toBeInTheDocument();
+
+  });
+
+  it("shows the save error when failing to save an appointment", async () => {
+    axios.put.mockRejectedValueOnce();
+
+    const { container, debug } = render(<Application />);
+
+    await waitForElement(() => getByText(container, "Archie Cohen"));
+
+    const appointments = getAllByTestId(container, "appointment");
+    const appointment = appointments[1];
+
+    fireEvent.click(getByAltText(appointment, "Edit"));
+
+    fireEvent.change(getByPlaceholderText(appointment, /enter student name/i), {
+      target: { value: "New name" }
+    });
+
+    fireEvent.click(getByText(appointment, "Save"));
+
+    //should be an error 
+    // Could not book appointment.
+
+    //these are mutually exclusive. 'Saving' should not show up with failed mock we put
+
+    //expect(await waitForElement(() => getByText(appointment, "Could not book appointment."))).toBeInTheDocument();
+    expect(getByText(appointment, "Saving")).not.toBeInTheDocument();
+
+
+    debug();
+
+  });
+
+  xit("shows the delete error when failing to delete an existing appointment", async () => {
 
   });
 
